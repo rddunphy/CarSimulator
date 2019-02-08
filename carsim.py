@@ -125,7 +125,7 @@ def main(img, pos):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Simulate obstacle avoiding car")
-    parser.add_argument("--file", type=str, help="Path to a PNG image of the map", default="test_map.png")
+    parser.add_argument("--file", type=str, help="Path to a PNG image of the map", default="maps/test_map.png")
     parser.add_argument("-x", type=int, help="X coordinate to start at", default=200)
     parser.add_argument("-y", type=int, help="Y coordinate to start at", default=1100)
     args = parser.parse_args()
