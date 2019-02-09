@@ -10,6 +10,21 @@ import numpy
 import png
 
 
+# GLOBALS
+
+# Increase for smaller turning circle:
+steering_factor = 0.01
+
+# Number of frames
+counter = 0
+
+# Margin from edge of map for placing car
+margin = 50
+
+# Distance from top of image considered goal
+goal_line = 80
+
+
 class Map:
     def __init__(self, img):
         r = png.Reader(filename=img)
@@ -27,9 +42,6 @@ class Map:
     def is_clear(self, pos):
         p = self.px[int(pos.imag)][int(pos.real)]
         return all((p[0] >= 127, p[1] >= 127, p[2] >= 127))
-
-
-steering_factor = 0.01
 
 
 class Car:
@@ -71,10 +83,8 @@ class Car:
         self.pos = self.to_world(complex(0, -1 if fwd else 1))
 
 
-counter = 0
-
-
-def update_car(map, car):
+def _move_car(map, car):
+    """Execute car move based on current world state."""
     if car.reverse_count:  # More reversing to do - go straight back
         if not all([map.is_clear(car.to_world(s)) for s in (car.back_right, car.back_left)]):  # Obstacle behind - stop reversing
             car.reverse_count = 0
@@ -116,9 +126,35 @@ def update_car(map, car):
             car.move(True, 0)
 
 
+def _plt_patch_list(map, car, ax):
+    corner = car.to_world(car.front_left)
+    shapes = [
+        plt.Circle((car.pos.real, car.pos.imag), radius=3, color='g'),
+        plt.Rectangle((corner.real, corner.imag), car.width, car.length,
+                      angle=math.degrees(car.rot), linewidth=2, edgecolor='g', facecolor='none')
+    ]
+    sensors = [car.to_world(s) for s in car.sensors]
+    shapes += [plt.Circle((p.real, p.imag), radius=7, color='m' if map.is_clear(p) else 'c') for p in sensors]
+    return [ax.add_patch(shape) for shape in shapes]
+
+
+def _end_animation():
+    print("Number of steps: {}".format(counter))
+    time.sleep(2)
+    exit(0)
+
+
+def _plt_animate(_, map, car, ax):
+    _move_car(map, car)
+    global counter
+    counter += 1
+    if car.pos.imag <= goal_line:
+        _end_animation()
+    return _plt_patch_list(map, car, ax)
+
+
 def main(img, start_x, start_y):
     map = Map(img)
-    margin = 50
     if start_x < 0 or start_y < 0:
         start_pos = complex(map.w / 2, map.h - margin)
     elif start_x < margin or start_y < margin or start_x > map.w - margin or start_y > map.h - margin:
@@ -130,32 +166,7 @@ def main(img, start_x, start_y):
     fig, ax = plt.subplots(1)
     ax.imshow(map.px)
     car = Car(start_pos)
-
-    def plt_car_patch(c):
-        corner = c.to_world(c.front_left)
-        shapes = [
-            plt.Circle((c.pos.real, c.pos.imag), radius=3, color='g'),
-            plt.Rectangle((corner.real, corner.imag), c.width, c.length,
-                      angle=math.degrees(car.rot), linewidth=2, edgecolor='g', facecolor='none')
-        ]
-        sensors = [c.to_world(s) for s in c.sensors]
-        shapes += [plt.Circle((p.real, p.imag), radius=7, color='m' if map.is_clear(p) else 'c') for p in sensors]
-        return [ax.add_patch(shape) for shape in shapes]
-
-    def plt_init():
-        return plt_car_patch(car)
-
-    def plt_anim(_, c):
-        update_car(map, c)
-        global counter
-        counter += 1
-        if c.pos.imag <= 80:
-            print(counter)
-            time.sleep(2)
-            exit()
-        return plt_car_patch(c)
-
-    _ = animation.FuncAnimation(fig, plt_anim, init_func=plt_init, fargs=(car,), interval=10, blit=True)
+    _ = animation.FuncAnimation(fig, _plt_animate, fargs=(map, car, ax), interval=10, blit=True)
     plt.show()
 
 
