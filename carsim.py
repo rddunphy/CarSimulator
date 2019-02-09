@@ -61,8 +61,9 @@ class Car:
         self.sensors = (self.front_sensor, self.back_right, self.back_left, self.front_right, self.front_left,
                         self.left_sensor, self.right_sensor)
         self.prefer_left = True
-        self.reverse_count = 0
-        self.steer_count = 0
+        self.reverse_count = 0  # Used to time how long to reverse for
+        self.steer_count = 0  # Used to time how long to steer in the same direction for
+        self.following_line = False
 
     def to_world(self, p):
         """Takes a point relative to the centre of the car (in driving direction) and calculates the world coordinates,
@@ -86,11 +87,12 @@ class Car:
 def _move_car(map, car):
     """Execute car move based on current world state."""
     if car.reverse_count:  # More reversing to do - go straight back
-        if not all([map.is_clear(car.to_world(s)) for s in (car.back_right, car.back_left)]):  # Obstacle behind - stop reversing
+        if not all([map.is_clear(car.to_world(s)) for s in (car.back_right, car.back_left)]):
+            # Obstacle behind - stop reversing
             car.reverse_count = 0
             return
-        car.move(False, 0)
-        car.reverse_count -= 1;
+        car.move(False, -1 if car.prefer_left else 1)
+        car.reverse_count -= 1
         return
     fs = car.to_world(car.front_sensor)
     frs = car.to_world(car.front_right)
@@ -104,8 +106,14 @@ def _move_car(map, car):
             car.prefer_left = True
         elif any([map.is_wall(x) for x in [fs, frs, fls]]):  # Obstacle is wall, so switch preferred direction
             car.prefer_left = True if car.rot > 0 else False
+            if car.following_line:  # Do a full 180 degree turn
+                car.reverse_count = 100
+                car.steer_count = 100
+                car.following_line = False
+                return
         car.reverse_count = 50
         car.steer_count = 50
+        car.following_line = False
         return
     if car.steer_count:  # Steer count means there was an obstacle and we reversed, so try turning
         if car.prefer_left:
@@ -113,7 +121,7 @@ def _move_car(map, car):
         else:
             car.move(True, 1)
         car.steer_count -= 1
-    else:
+    else:  # Move toward goal line
         if not map.is_clear(rs):  # Obstacle on outer sensor but not emergency brake sensor
             car.move(True, -1)
         elif not map.is_clear(ls):
@@ -124,6 +132,7 @@ def _move_car(map, car):
             car.move(True, 1)
         else:  # No obstacle, car already straight - full speed ahead
             car.move(True, 0)
+    car.following_line = map.is_line(rs) or map.is_line(ls)
 
 
 def _plt_patch_list(map, car, ax):
