@@ -14,7 +14,8 @@ class Map:
     def __init__(self, img):
         r = png.Reader(filename=img)
         self.w, self.h, px, _ = r.read_flat()
-        self.px = numpy.array(px).reshape((self.h, self.w, 3))
+        ch = int(round(len(px) / (self.w * self.h)))
+        self.px = numpy.array(px).reshape((self.h, self.w, ch))
 
     def is_wall(self, pos):
         return not any((self.is_line(pos), self.is_clear(pos)))
@@ -115,8 +116,17 @@ def update_car(map, car):
             car.move(True, 0)
 
 
-def main(img, start_pos):
+def main(img, start_x, start_y):
     map = Map(img)
+    margin = 50
+    if start_x < 0 or start_y < 0:
+        start_pos = complex(map.w / 2, map.h - margin)
+    elif start_x < margin or start_y < margin or start_x > map.w - margin or start_y > map.h - margin:
+        print("Start coordinates out of bounds - need to be at least {}px within the edge of the image. "
+              "(x: [{}; {}], y: [{}; {}])".format(margin, margin, map.w - margin, margin, map.h - margin))
+        exit(1)
+    else:
+        start_pos = complex(start_x, start_y)
     fig, ax = plt.subplots(1)
     ax.imshow(map.px)
     car = Car(start_pos)
@@ -151,8 +161,8 @@ def main(img, start_pos):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Simulate obstacle avoiding car")
-    parser.add_argument("--file", type=str, help="Path to a PNG image of the map", default="maps/test_map.png")
-    parser.add_argument("-x", type=int, help="X coordinate to start at", default=200)
-    parser.add_argument("-y", type=int, help="Y coordinate to start at", default=1100)
+    parser.add_argument("file", type=str, nargs='?', help="Path to a PNG image of the map", default="maps/default_map.png")
+    parser.add_argument("-x", type=int, help="X coordinate to start at", default=-1)
+    parser.add_argument("-y", type=int, help="Y coordinate to start at", default=-1)
     args = parser.parse_args()
-    main(args.file, complex(args.x, args.y))
+    main(args.file, args.x, args.y)
