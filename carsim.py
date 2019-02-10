@@ -98,7 +98,7 @@ def _end_animation(count):
 
 
 def _plt_animate(frame, map, car, alg, ax):
-    speed, dir = alg.get_move(map, car)
+    speed, dir = alg.get_move()
     car.move(speed, dir)
     if car.pos.imag <= goal_line:
         _end_animation(frame)
@@ -119,7 +119,7 @@ def main(img, start_x, start_y):
     fig, ax = plt.subplots(1)
     ax.imshow(map.px)
     car = Car(start_pos)
-    alg = StupidAlgorithm()
+    alg = StupidAlgorithm(map, car)
     _ = animation.FuncAnimation(fig, _plt_animate, fargs=(map, car, alg, ax), interval=10, blit=True)
     plt.show()
 
