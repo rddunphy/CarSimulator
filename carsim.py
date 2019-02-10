@@ -107,13 +107,15 @@ def _plt_animate(frame, map, car, alg, ax):
 
 def main(img, start_x, start_y):
     map = Map(img)
-    start_pos = complex(start_x, start_y)
-    if start_x < 0 or start_y < 0:
-        start_pos = complex(map.w / 2, map.h - 2*margin)
-    elif start_x < margin or start_y < margin or start_x > map.w - margin or start_y > map.h - margin:
+    if start_x < 0:
+        start_x = map.w / 2
+    if start_y < 0:
+        start_y = map.h - margin
+    if start_x < margin or start_y < margin or start_x > map.w - margin or start_y > map.h - margin:
         print("Start coordinates out of bounds - need to be at least {}px within the edge of the image. "
               "(x: [{}; {}], y: [{}; {}])".format(margin, margin, map.w - margin, margin, map.h - margin))
         exit(1)
+    start_pos = complex(start_x, start_y)
     fig, ax = plt.subplots(1)
     ax.imshow(map.px)
     car = Car(start_pos)
@@ -122,10 +124,14 @@ def main(img, start_x, start_y):
     plt.show()
 
 
-if __name__ == '__main__':
+def get_args():
     parser = argparse.ArgumentParser("Simulate obstacle avoiding car")
     parser.add_argument("file", type=str, nargs='?', help="Path to a PNG image of the map", default="maps/default_map.png")
     parser.add_argument("-x", type=int, help="X coordinate to start at", default=-1)
     parser.add_argument("-y", type=int, help="Y coordinate to start at", default=-1)
     args = parser.parse_args()
-    main(args.file, args.x, args.y)
+    return args.file, args.x, args.y
+
+
+if __name__ == '__main__':
+    main(*get_args())
